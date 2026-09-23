@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Claire's Academic Calendar</title>
+    <style>
+        /* [공통 변수] 감성적인 베이비핑크 및 시스템 컬러 정의 */
+        :root {
+            --primary-pink: #f48fb1;
+            --baby-pink: #fff0f3;
+            --border-pink: #ffd1dc;
+            --text-dark: #333333;
+            --text-muted: #888888;
+            --bg-color: #fcf9fb;
+        }
+
+        /* [기본 바디] 화면 중앙 정렬 및 시스템 폰트 적용 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .calendar-wrapper {
+            width: 100%;
+            max-width: 950px;
+        }
+
+        /* [상단 컨트롤 바] 월 이동 탭과 설정/태그 관리 바 배치 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* [월별 탭 버튼 컨테이너] 2026.10 ~ 2027.03 */
+        .month-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            max-width: 100%;
+            padding-bottom: 4px;
+        }
+
+        /* [월별 탭 버튼 개별 디자인] */
+        .tab-btn {
+            background-color: #ffffff;
+            border: 1px solid var(--border-pink);
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        /* [선택된 활성 탭] */
+        .tab-btn.active {
+            background-color: var(--primary-pink);
+            color: #ffffff;
+            border-color: var(--primary-pink);
+            box-shadow: 0 4px 10px rgba(244, 143, 177, 0.3);
+        }
+
+        /* [상단 우측 관리 및 설정 버튼 그룹] */
+        .top-right-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* [상단 태그 바] */
+        .tag-control-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #ffffff;
+            padding: 5px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border-pink);
+            box-shadow: 0 2px 5px rgba(255, 182, 193, 0.1);
+            overflow-x: auto;
+        }
+
+        .tag-pill {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            white-space: nowrap;
+        }
+
+        /* [헤더 공통 유틸 버튼] 태그 관리 & 환경설정 */
+        .header-action-btn {
+            background: #fff5f7;
+            color: #db7093;
+            border: 1px solid var(--border-pink);
+            border-radius: 8px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .header-action-btn:hover {
+            background-color: var(--primary-pink);
+            color: #ffffff;
+        }
+
+        .add-tag-btn {
+            background: var(--primary-pink);
+            color: #ffffff;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* [캘린더 메인 컨테이너] */
+        .calendar-container {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 182, 193, 0.15);
+            border: 1px solid #fce4ec;
+        }
+
+        .calendar-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #db7093;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: #a0848c;
+            margin-bottom: 8px;
+        }
+        .weekdays div:first-child { color: #e57373; }
+        .weekdays div:last-child { color: #64b5f6; }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        /* [개별 날짜 칸] */
+        .calendar-cell {
+            position: relative;
+            background-color: #fffdfd;
+            border: 1px solid #f8e1e7;
+            border-radius: 12px;
+            height: 105px;
+            padding: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            cursor: pointer;
+        }
+
+        .calendar-cell.empty {
+            background-color: transparent;
+            border: none;
+            pointer-events: none;
+        }
+
+        .calendar-cell:hover {
+            border-color: var(--primary-pink);
+            background-color: #fff7f9;
+        }
+
+        .date-number {
+            font-size: 12px;
+            font-weight: 700;
+            color: #555555;
+            margin-bottom: 4px;
+        }
+
+        .cell-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .summary-item {
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        .summary-item .bold-tag {
+            font-weight: 700;
+            color: #333333;
+            margin-right: 3px;
+        }
+
+        .summary-item.completed {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        /* [맥 감성 베이비핑크 스티키 노트] */
+        .sticky-note {
+            position: absolute;
+            top: -5px;
+            left: calc(100% + 8px);
+            width: 250px;
+            min-height: 220px;
+            background-color: var(--baby-pink);
+            border: 1px solid var(--border-pink);
+            border-radius: 14px;
+            box-shadow: 0 12px 28px rgba(255, 182, 193, 0.4);
+            padding: 12px;
+            box-sizing: border-box;
+            
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(4px) scale(0.98);
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                        visibility 0.22s;
+            z-index: 9999;
+            cursor: default;
+        }
+
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -12px;
+            width: 14px;
+            height: 100%;
+            background: transparent;
+        }
+
+        .calendar-cell.align-left .sticky-note {
+            left: auto;
+            right: calc(100% + 8px);
+        }
+        .calendar-cell.align-left .sticky-note::before {
+            left: auto;
+            right: -12px;
+        }
+
+        /* [모드 1: PC 호버 모드] */
+        body.hover-mode .calendar-cell:hover {
+            z-index: 100;
+        }
+        body.hover-mode .calendar-cell:hover .sticky-note {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* [모드 2: 모바일/클릭 모드] */
+        body.click-mode .calendar-cell.active-note {
+            z-index: 200;
+            border-color: var(--primary-pink);
+            background-color: #fff7f9;
+        }
+        body.click-mode .calendar-cell.active-note .sticky-note {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .sticky-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #d87093;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #ffd1dc;
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* [방식 A: 구글 캘린더 전송 버튼 스타일] */
+        .gcal-export-btn {
+            background: #ffffff;
+            border: 1px solid #ffd1dc;
+            color: #db7093;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .gcal-export-btn:hover {
+            background: var(--primary-pink);
+            color: #ffffff;
+            border-color: var(--primary-pink);
+        }
+
+        .quick-tag-bar {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .quick-tag-btn {
+            font-size: 9.5px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,0,0,0.06);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 130px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+        }
+
+        .todo-checkbox {
+            cursor: pointer;
+            accent-color: var(--primary-pink);
+        }
+
+        .todo-text {
+            flex-grow: 1;
+            word-break: break-all;
+        }
+
+        .todo-text.done {
+            text-decoration: line-through;
+            color: #999999;
+        }
+
+        .todo-delete-btn {
+            cursor: pointer;
+            color: #d88;
+            font-size: 11px;
+            border: none;
+            background: none;
+            padding: 0 3px;
+        }
+
+        .todo-input-row {
+            display: flex;
+            gap: 4px;
+            margin-top: auto;
+        }
+
+        .todo-input {
+            flex-grow: 1;
+            border: 1px solid var(--border-pink);
+            border-radius: 8px;
+            padding: 5px 6px;
+            font-size: 11px;
+            background: #ffffff;
+            outline: none;
+        }
+
+        .todo-add-btn {
+            background-color: var(--primary-pink);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* [모달 공통 스타일] */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.35);
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            padding: 22px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .modal-content h3 { margin: 0 0 14px 0; font-size: 15px; color: #db7093; }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f8e1e7;
+        }
+        .setting-label { font-size: 13px; font-weight: 600; color: #444; }
+        .setting-desc { font-size: 11px; color: #888; margin-top: 2px; }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-pink); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .tag-manage-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 230px;
+            overflow-y: auto;
+            margin-bottom: 14px;
+        }
+
+        .tag-manage-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #fafafa;
+            padding: 6px 8px;
+            border-radius: 10px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .color-dot-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.15);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .tag-name-input {
+            flex-grow: 1;
+            border: 1px solid #ffd1dc;
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 12px;
+            outline: none;
+            width: 80px;
+        }
+
+        .tag-order-btns { display: flex; gap: 2px; }
+        .order-btn {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 10px;
+            padding: 3px 5px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .tag-del-btn {
+            background: #ffebee;
+            color: #e57373;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .hex-picker-popover {
+            display: none;
+            position: absolute;
+            top: 35px;
+            left: 20px;
+            background: #ffffff;
+            border: 1px solid #ffd1dc;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+            z-index: 10005;
+            width: 250px;
+        }
+
+        .hex-picker-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+            justify-items: center;
+        }
+
+        .palette-chip {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.08);
+            cursor: pointer;
+        }
+
+        .hex-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .hex-input-box {
+            width: 100%;
+            padding: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            border: 1px solid var(--border-pink);
+            border-radius: 8px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .hex-picker-btns { display: flex; gap: 6px; margin-top: 8px; }
+
+        @media (max-width: 600px) {
+            body { padding: 10px 5px; }
+            .calendar-container { padding: 12px; border-radius: 16px; }
+            .calendar-header { font-size: 17px; margin-bottom: 12px; }
+            .calendar-cell { height: 90px; padding: 4px; border-radius: 8px; }
+            .date-number { font-size: 11px; }
+            .summary-item { font-size: 9px; }
+
+            .sticky-note {
+                left: 50% !important;
+                right: auto !important;
+                top: 50% !important;
+                transform: translate(-50%, -50%) scale(0.98) !important;
+                width: 270px;
+                position: fixed;
+            }
+            body.click-mode .calendar-cell.active-note .sticky-note {
+                transform: translate(-50%, -50%) scale(1) !important;
+            }
+        }
+    </style>
+</head>
+<body class="hover-mode">
+
+    <div class="calendar-wrapper">
+        <!-- 상단 컨트롤 영역 -->
+        <div class="top-bar">
+            <div class="month-tabs" id="monthTabs"></div>
+            <div class="top-right-controls">
+                <div class="tag-control-bar" id="tagControlBar">
+                    <button class="add-tag-btn" onclick="openAddTagModal()" title="새 태그 추가">+</button>
+                </div>
+                <button class="header-action-btn" onclick="openManageTagsModal()">🏷️ 태그 관리</button>
+                <button class="header-action-btn" onclick="openSettingsModal()">⚙️ 설정</button>
+            </div>
+        </div>
+
+        <!-- 캘린더 카드 본체 -->
+        <div class="calendar-container">
+            <div class="calendar-header" id="calendarTitle">2026년 10월</div>
+            <div class="weekdays">
+                <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+            </div>
+            <div class="days-grid" id="calendarGrid"></div>
+        </div>
+    </div>
+
+    <!-- 1. 새 과목 태그 추가 모달창 -->
+    <div class="modal" id="addTagModal" onclick="closeAddTagModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>✨ 새 과목/태그 추가</h3>
+            <input type="text" id="newTagName" placeholder="예: 교육사회, 영교문2, 근로장학..." style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border-pink); border-radius: 8px; margin-bottom: 12px; outline: none; font-size: 12px;">
+            <div style="display: flex; gap: 6px;">
+                <button class="tab-btn active" style="flex:1;" onclick="saveNewTag()">추가하기</button>
+                <button class="tab-btn" style="flex:1;" onclick="closeAddTagModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 태그 순서 및 색상 관리창 -->
+    <div class="modal" id="manageTagsModal" onclick="closeManageTagsModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>⚙️ 태그 순서 및 색상 관리</h3>
+            <div class="tag-manage-list" id="tagManageList"></div>
+            <button class="tab-btn active" style="width: 100%;" onclick="closeManageTagsModal()">완료</button>
+
+            <!-- 전용 HEX 피커 -->
+            <div class="hex-picker-popover" id="hexPickerPopover">
+                <div class="hex-picker-palette" id="hexPalette"></div>
+                <div class="hex-input-group">
+                    <div style="font-size: 11px; font-weight: 700; color: #777; text-align: center;">HEX CODE</div>
+                    <input type="text" class="hex-input-box" id="hexInputBox" maxlength="7" placeholder="#FFE0B2">
+                </div>
+                <div class="hex-picker-btns">
+                    <button class="tab-btn active" style="flex:1; padding: 6px;" onclick="applyHexColor()">적용</button>
+                    <button class="tab-btn" style="flex:1; padding: 6px;" onclick="closeHexPicker()">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 환경설정 모달창 -->
+    <div class="modal" id="settingsModal" onclick="closeSettingsModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>⚙️ 캘린더 환경 설정</h3>
+            <div class="setting-row">
+                <div>
+                    <div class="setting-label">클릭(터치)하여 메모 열기</div>
+                    <div class="setting-desc">모바일에서는 켜고, PC에서는 끕니다.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="clickModeToggle" onchange="handleModeToggle(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <p style="font-size: 11px; color: #999; margin: 12px 0 16px 0; line-height: 1.4;">
+                * 이 설정은 현재 기기(아이폰/PC)에만 개별 저장되므로, 다른 기기와 충돌하지 않습니다.
+            </p>
+            <button class="tab-btn active" style="width: 100%;" onclick="closeSettingsModal()">완료</button>
+        </div>
+    </div>
+
+    <script>
+        /* [4번 사진 16색 파스텔 프리셋] */
+        const photoColors = [
+            "#FFF59D", "#FFE0B2", "#FFCC80", "#FFAB91",
+            "#E6EE9C", "#C5E1A5", "#A7F3D0", "#B3E5FC",
+            "#90CAF9", "#CE93D8", "#F48FB1", "#F8BBD0",
+            "#BCAAA4", "#D7CCC8", "#E0E0E0", "#607D8B"
+        ];
+
+        /* [태그 데이터베이스] */
+        let customTags = JSON.parse(localStorage.getItem('academic_custom_tags')) || [
+            { name: "교육사회", color: "#FFE0B2" },
+            { name: "영교문2", color: "#B3E5FC" },
+            { name: "근로장학", color: "#CE93D8" }
+        ];
+
+        let isClickMode = JSON.parse(localStorage.getItem('device_click_mode')) || false;
+
+        const monthsData = [
+            { year: 2026, month: 9, title: "2026년 10월" },
+            { year: 2026, month: 10, title: "2026년 11월" },
+            { year: 2026, month: 11, title: "2026년 12월" },
+            { year: 2027, month: 0, title: "2027년 1월" },
+            { year: 2027, month: 1, title: "2027년 2월" },
+            { year: 2027, month: 2, title: "2027년 3월" }
+        ];
+
+        let currentMonthIndex = 0;
+        let activeEditingTagIndex = null;
+
+        const tabsContainer = document.getElementById('monthTabs');
+        const gridContainer = document.getElementById('calendarGrid');
+        const titleContainer = document.getElementById('calendarTitle');
+        const tagControlBar = document.getElementById('tagControlBar');
+
+        function applyDeviceMode() {
+            if (isClickMode) {
+                document.body.classList.remove('hover-mode');
+                document.body.classList.add('click-mode');
+            } else {
+                document.body.classList.remove('click-mode');
+                document.body.classList.add('hover-mode');
+                document.querySelectorAll('.calendar-cell.active-note').forEach(c => c.classList.remove('active-note'));
+            }
+            document.getElementById('clickModeToggle').checked = isClickMode;
+        }
+
+        function handleModeToggle(checked) {
+            isClickMode = checked;
+            localStorage.setItem('device_click_mode', JSON.stringify(isClickMode));
+            applyDeviceMode();
+        }
+
+        function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+
+        function renderTagsBar() {
+            const existingPills = tagControlBar.querySelectorAll('.tag-pill');
+            existingPills.forEach(p => p.remove());
+
+            const addBtn = tagControlBar.querySelector('.add-tag-btn');
+
+            customTags.forEach((tag) => {
+                const pill = document.createElement('span');
+                pill.className = 'tag-pill';
+                pill.style.backgroundColor = tag.color;
+                pill.textContent = tag.name;
+                tagControlBar.insertBefore(pill, addBtn);
+            });
+        }
+
+        function openAddTagModal() {
+            document.getElementById('addTagModal').style.display = 'flex';
+            document.getElementById('newTagName').value = '';
+        }
+        function closeAddTagModal() { document.getElementById('addTagModal').style.display = 'none'; }
+
+        function saveNewTag() {
+            const name = document.getElementById('newTagName').value.trim();
+            if (!name) return;
+            const randomColor = photoColors[Math.floor(Math.random() * photoColors.length)];
+            customTags.push({ name: name, color: randomColor });
+            localStorage.setItem('academic_custom_tags', JSON.stringify(customTags));
+            renderTagsBar();
+            renderCalendar();
+            closeAddTagModal();
+        }
+
+        function openManageTagsModal() {
+            closeHexPicker();
+            renderManageTagList();
+            document.getElementById('manageTagsModal').style.display = 'flex';
+        }
+        function closeManageTagsModal() {
+            closeHexPicker();
+            document.getElementById('manageTagsModal').style.display = 'none';
+        }
+
+        function moveTagOrder(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= customTags.length) return;
+            const temp = customTags[index];
+            customTags[index] = customTags[targetIndex];
+            customTags[targetIndex] = temp;
+            localStorage.setItem('academic_custom_tags', JSON.stringify(customTags));
+            renderTagsBar();
+            renderManageTagList();
+            renderCalendar();
+        }
+
+        function renderManageTagList() {
+            const listContainer = document.getElementById('tagManageList');
+            listContainer.innerHTML = '';
+
+            customTags.forEach((tag, idx) => {
+                const row = document.createElement('div');
+                row.className = 'tag-manage-item';
+
+                const dotBtn = document.createElement('button');
+                dotBtn.className = 'color-dot-btn';
+                dotBtn.style.backgroundColor = tag.color;
+                dotBtn.onclick = (e) => { e.stopPropagation(); openHexPicker(idx); };
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'tag-name-input';
+                nameInput.value = tag.name;
+                nameInput.onchange = (e) => {
+                    tag.name = e.target.value.trim() || tag.name;
+                    localStorage.setItem('academic_custom_tags', JSON.stringify(customTags));
+                    renderTagsBar();
+                    renderCalendar();
+                };
+
+                const orderBtns = document.createElement('div');
+                orderBtns.className = 'tag-order-btns';
+                const upBtn = document.createElement('button');
+                upBtn.className = 'order-btn';
+                upBtn.textContent = '▲';
+                upBtn.disabled = (idx === 0);
+                upBtn.onclick = () => moveTagOrder(idx, -1);
+
+                const downBtn = document.createElement('button');
+                downBtn.className = 'order-btn';
+                downBtn.textContent = '▼';
+                downBtn.disabled = (idx === customTags.length - 1);
+                downBtn.onclick = () => moveTagOrder(idx, 1);
+                orderBtns.appendChild(upBtn);
+                orderBtns.appendChild(downBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'tag-del-btn';
+                delBtn.textContent = '삭제';
+                delBtn.onclick = () => {
+                    if (confirm(`'${tag.name}' 태그를 정말 삭제하시겠습니까?`)) {
+                        customTags.splice(idx, 1);
+                        localStorage.setItem('academic_custom_tags', JSON.stringify(customTags));
+                        renderTagsBar();
+                        renderCalendar();
+                        renderManageTagList();
+                    }
+                };
+
+                row.appendChild(dotBtn);
+                row.appendChild(nameInput);
+                row.appendChild(orderBtns);
+                row.appendChild(delBtn);
+                listContainer.appendChild(row);
+            });
+        }
+
+        function openHexPicker(tagIndex) {
+            activeEditingTagIndex = tagIndex;
+            const targetTag = customTags[tagIndex];
+            const popover = document.getElementById('hexPickerPopover');
+            const inputBox = document.getElementById('hexInputBox');
+            const palette = document.getElementById('hexPalette');
+
+            inputBox.value = targetTag.color.toUpperCase();
+            palette.innerHTML = '';
+            photoColors.forEach(col => {
+                const chip = document.createElement('div');
+                chip.className = 'palette-chip';
+                chip.style.backgroundColor = col;
+                chip.onclick = () => { inputBox.value = col.toUpperCase(); };
+                palette.appendChild(chip);
+            });
+            popover.style.display = 'block';
+        }
+
+        function closeHexPicker() {
+            document.getElementById('hexPickerPopover').style.display = 'none';
+            activeEditingTagIndex = null;
+        }
+
+        function applyHexColor() {
+            if (activeEditingTagIndex === null) return;
+            let val = document.getElementById('hexInputBox').value.trim();
+            if (!val.startsWith('#')) val = '#' + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                customTags[activeEditingTagIndex].color = val.toUpperCase();
+                localStorage.setItem('academic_custom_tags', JSON.stringify(customTags));
+                renderTagsBar();
+                renderCalendar();
+                renderManageTagList();
+                closeHexPicker();
+            } else {
+                alert('올바른 HEX 코드를 입력해 주세요!');
+            }
+        }
+
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            monthsData.forEach((m, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${idx === currentMonthIndex ? 'active' : ''}`;
+                btn.textContent = m.title;
+                btn.onclick = () => {
+                    currentMonthIndex = idx;
+                    renderCalendar();
+                    renderTabs();
+                };
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function getDayData(key) { return JSON.parse(localStorage.getItem(key)) || []; }
+        function saveDayData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+        function sortTodosByTagOrder(todos) {
+            return todos.sort((a, b) => {
+                const indexA = customTags.findIndex(t => t.name === a.tag);
+                const indexB = customTags.findIndex(t => t.name === b.tag);
+                const orderA = indexA !== -1 ? indexA : 9999;
+                const orderB = indexB !== -1 ? indexB : 9999;
+                return orderA - orderB;
+            });
+        }
+
+        /* [방식 A 구현: 구글 캘린더 원클릭 추가 함수] */
+        function exportToGoogleCalendar(year, month, day, todos) {
+            if (!todos || todos.length === 0) {
+                alert('등록할 할 일 일정이 없습니다!');
+                return;
+            }
+
+            // 날짜 포맷 (YYYYMMDD)
+            const yyyy = year;
+            const mm = String(month).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${yyyy}${mm}${dd}`;
+
+            // 일정 제목 생성 (첫 번째 일정 요약)
+            const firstItem = todos[0];
+            const titlePrefix = firstItem.tag ? `[${firstItem.tag}] ` : '';
+            const moreCount = todos.length > 1 ? ` 외 ${todos.length - 1}건` : '';
+            const title = `${titlePrefix}${firstItem.text}${moreCount}`;
+
+            // 상세 내용(Description) 생성
+            let desc = `[${yyyy}년 ${month}월 ${day}일 스티키 투두 목록]\n\n`;
+            todos.forEach((item, idx) => {
+                const tag = item.tag ? `[${item.tag}] ` : '';
+                const status = item.done ? '✓ (완료) ' : '□ (진행중) ';
+                desc += `${idx + 1}. ${status}${tag}${item.text}\n`;
+            });
+
+            // 구글 캘린더 일정 등록 URL 빌드
+            const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE`
+                + `&text=${encodeURIComponent(title)}`
+                + `&dates=${dateStr}/${dateStr}`
+                + `&details=${encodeURIComponent(desc)}`;
+
+            // 새 탭으로 구글 캘린더 등록 창 열기
+            window.open(gcalUrl, '_blank');
+        }
+
+        /* [캘린더 그리드 렌더링] */
+        function renderCalendar() {
+            const currentData = monthsData[currentMonthIndex];
+            titleContainer.textContent = currentData.title;
+            gridContainer.innerHTML = '';
+
+            const year = currentData.year;
+            const month = currentData.month;
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-cell empty';
+                gridContainer.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+
+                if ((firstDayIndex + day - 1) % 7 === 6) {
+                    cell.classList.add('align-left');
+                }
+
+                const storageKey = `academic_todos_${year}_${month + 1}_${day}`;
+                let todos = sortTodosByTagOrder(getDayData(storageKey));
+
+                // 칸 내부 요약
+                const summaryContainer = document.createElement('div');
+                summaryContainer.className = 'cell-summary';
+
+                function updateSummary() {
+                    summaryContainer.innerHTML = '';
+                    todos = sortTodosByTagOrder(todos);
+                    todos.slice(0, 3).forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = `summary-item ${item.done ? 'completed' : ''}`;
+                        div.innerHTML = `<span class="bold-tag">${item.tag ? '[' + item.tag + ']' : '•'}</span>${item.text}`;
+                        summaryContainer.appendChild(div);
+                    });
+                }
+                updateSummary();
+
+                // 스티키 노트
+                const stickyNote = document.createElement('div');
+                stickyNote.className = 'sticky-note';
+                stickyNote.onclick = (e) => e.stopPropagation();
+
+                // 상단 헤더 (제목 + 구글 캘린더 버튼 + 닫기 버튼)
+                const header = document.createElement('div');
+                header.className = 'sticky-header';
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = `${month + 1}월 ${day}일 스티키 투두`;
+
+                const headerRightBtns = document.createElement('div');
+                headerRightBtns.style.display = 'flex';
+                headerRightBtns.style.alignItems = 'center';
+                headerRightBtns.style.gap = '6px';
+
+                // [방식 A] 구글 캘린더 원클릭 버튼 생성
+                const gcalBtn = document.createElement('button');
+                gcalBtn.className = 'gcal-export-btn';
+                gcalBtn.innerHTML = '📅 구글 캘린더';
+                gcalBtn.title = '이 날짜의 할 일을 구글 캘린더에 바로 추가';
+                gcalBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    exportToGoogleCalendar(year, month + 1, day, todos);
+                };
+
+                const closeBtn = document.createElement('span');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.style.cursor = 'pointer';
+                closeBtn.style.fontSize = '16px';
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    cell.classList.remove('active-note');
+                };
+
+                headerRightBtns.appendChild(gcalBtn);
+                headerRightBtns.appendChild(closeBtn);
+
+                header.appendChild(titleSpan);
+                header.appendChild(headerRightBtns);
+                stickyNote.appendChild(header);
+
+                // 빠른 태그 선택 바
+                const quickTagBar = document.createElement('div');
+                quickTagBar.className = 'quick-tag-bar';
+                let selectedTag = customTags.length > 0 ? customTags[0].name : '';
+
+                function renderQuickTags() {
+                    quickTagBar.innerHTML = '';
+                    customTags.forEach(t => {
+                        const btn = document.createElement('button');
+                        btn.className = 'quick-tag-btn';
+                        btn.style.backgroundColor = t.color;
+                        btn.textContent = t.name;
+                        if (t.name === selectedTag) {
+                            btn.style.outline = '2px solid var(--primary-pink)';
+                        }
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            selectedTag = t.name;
+                            renderQuickTags();
+                        };
+                        quickTagBar.appendChild(btn);
+                    });
+                }
+                renderQuickTags();
+                stickyNote.appendChild(quickTagBar);
+
+                // 체크리스트 목록
+                const listContainer = document.createElement('div');
+                listContainer.className = 'todo-list';
+
+                function renderTodoList() {
+                    listContainer.innerHTML = '';
+                    todos = sortTodosByTagOrder(todos);
+                    todos.forEach((item, idx) => {
+                        const row = document.createElement('div');
+                        row.className = 'todo-item';
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'todo-checkbox';
+                        checkbox.checked = item.done;
+                        checkbox.onclick = (e) => {
+                            e.stopPropagation();
+                            item.done = checkbox.checked;
+                            saveDayData(storageKey, todos);
+                            renderTodoList();
+                            updateSummary();
+                        };
+
+                        const span = document.createElement('span');
+                        span.className = `todo-text ${item.done ? 'done' : ''}`;
+                        span.innerHTML = `<b>${item.tag ? '[' + item.tag + '] ' : ''}</b>${item.text}`;
+
+                        const delBtn = document.createElement('button');
+                        delBtn.className = 'todo-delete-btn';
+                        delBtn.innerHTML = '&times;';
+                        delBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            todos.splice(idx, 1);
+                            saveDayData(storageKey, todos);
+                            renderTodoList();
+                            updateSummary();
+                        };
+
+                        row.appendChild(checkbox);
+                        row.appendChild(span);
+                        row.appendChild(delBtn);
+                        listContainer.appendChild(row);
+                    });
+                }
+                renderTodoList();
+                stickyNote.appendChild(listContainer);
+
+                // 입력 행
+                const inputRow = document.createElement('div');
+                inputRow.className = 'todo-input-row';
+
+                const input = document.createElement('input');
+                input.className = 'todo-input';
+                input.placeholder = '새 할 일 입력...';
+                input.onclick = (e) => e.stopPropagation();
+
+                const addBtn = document.createElement('button');
+                addBtn.className = 'todo-add-btn';
+                addBtn.textContent = '추가';
+
+                function handleAddTodo() {
+                    const txt = input.value.trim();
+                    if (!txt) return;
+                    todos.push({ tag: selectedTag, text: txt, done: false });
+                    todos = sortTodosByTagOrder(todos);
+                    saveDayData(storageKey, todos);
+                    input.value = '';
+                    renderTodoList();
+                    updateSummary();
+                }
+
+                addBtn.onclick = (e) => { e.stopPropagation(); handleAddTodo(); };
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.stopPropagation(); handleAddTodo(); }
+                });
+
+                inputRow.appendChild(input);
+                inputRow.appendChild(addBtn);
+                stickyNote.appendChild(inputRow);
+
+                // 날짜 칸 조립
+                const dateNum = document.createElement('div');
+                dateNum.className = 'date-number';
+                dateNum.textContent = day;
+
+                cell.appendChild(dateNum);
+                cell.appendChild(summaryContainer);
+                cell.appendChild(stickyNote);
+
+                cell.onclick = (e) => {
+                    if (!isClickMode) return;
+                    e.stopPropagation();
+                    const wasActive = cell.classList.contains('active-note');
+                    document.querySelectorAll('.calendar-cell.active-note').forEach(c => c.classList.remove('active-note'));
+                    if (!wasActive) {
+                        cell.classList.add('active-note');
+                    }
+                };
+
+                gridContainer.appendChild(cell);
+            }
+        }
+
+        document.addEventListener('click', () => {
+            if (isClickMode) {
+                document.querySelectorAll('.calendar-cell.active-note').forEach(c => c.classList.remove('active-note'));
+            }
+        });
+
+        applyDeviceMode();
+        renderTagsBar();
+        renderTabs();
+        renderCalendar();
+    </script>
+</body>
+</html>
